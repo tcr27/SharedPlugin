@@ -51,7 +51,7 @@ public class LogOverlay implements Behavior, Drawable, Listener, Configurable<Lo
             "plein", "indisponible", "non disponible", "interdit",
             // Errors (EN)
             "error", "failed", "refused", "denied", "unavailable", "full",
-            "cannot", "can't"
+            "cannot", "can't",
     };
 
     private final Deque<Entry> entries = new ArrayDeque<>();
