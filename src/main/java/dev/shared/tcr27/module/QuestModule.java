@@ -1,7 +1,11 @@
 package dev.shared.tcr27.module;
 
+import com.github.manolo8.darkbot.Main;
+import com.github.manolo8.darkbot.core.BotInstaller;
 import com.github.manolo8.darkbot.core.manager.GuiManager;
+import com.github.manolo8.darkbot.core.objects.Gui;
 import com.github.manolo8.darkbot.core.objects.facades.QuestProxy;
+import com.github.manolo8.darkbot.utils.Time;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.game.entities.Station;
@@ -15,6 +19,8 @@ import eu.darkbot.util.Timer;
 import java.util.List;
 import java.util.Optional;
 
+import static com.github.manolo8.darkbot.Main.API;
+
 @Feature(name = "Quest Module", description = "Does your quests.")
 public class QuestModule extends LootCollectorModule {
 
@@ -23,57 +29,60 @@ public class QuestModule extends LootCollectorModule {
     private final EntitiesAPI entities;
     private final HeroAPI heroApi;
     private final QuestAPI questApi;
-    private final WindowAPI windowApi;
+    private final GuiManager guiManager;
+    private final BotInstaller botInstaller;
+
     private long nextCheck = 0L;
     private long nextCheck1 = 0L;
-    private boolean onHold = false;
+    private long initializeQuests = 0L;
+    private boolean onHold = true;
     private boolean flag = true;
     private boolean questSelected = false;
 
 
-    private Timer loadQuestGiverTimer = Timer.get(1_000L);
-    private Timer firstQuestTimer = Timer.get(1_000L);
-    private Timer scrollQuestTimer = Timer.get(1_000L);
-
-    public QuestModule(PluginAPI api, MapTraveler mapTraveler) {
+    public QuestModule(PluginAPI api, GuiManager guiManager, MapTraveler mapTraveler) {
         super(api);
+        this.guiManager = guiManager;
         this.mapTraveler = mapTraveler;
+        this.botInstaller = api.requireInstance(BotInstaller.class);
         this.starSystemAPI = api.requireAPI(StarSystemAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.heroApi = api.requireAPI(HeroAPI.class);
         this.questApi = api.requireAPI(QuestAPI.class);
-        this.windowApi = api.requireAPI(WindowAPI.class);
     }
 
     @Override
     public void onTickModule() {
         if (System.currentTimeMillis() >= nextCheck) {
-            if (!hasQuests()) {
-                acceptQuests();
+            hasQuests();
+            acceptQuests();
+            /*if (!hasQuests()) {
                 onHold = true;
             } else {
                 onHold = false;
-            }
+            }*/
 
-            nextCheck = System.currentTimeMillis() + 1_000L;
+            nextCheck = System.currentTimeMillis() + 2_000L;
         }
-        if (!onHold) {
-            super.onTickModule();
-        }
+        //super.onTickModule();
     }
 
     private boolean hasQuests() {
-        List<? extends QuestAPI.QuestListItem> quests = this.questApi.getCurrestQuests();
-        boolean hasActiveQuest = false;
-        if (quests == null) {
-            return hasActiveQuest;
-        }
 
-        for (QuestAPI.QuestListItem quest : quests) {
-            if (!quest.isActivable())
-                continue;
-            log(quest.getTitle());
+        Gui questsGui = this.guiManager.getGui("quests");
+        if (questsGui == null) {
+            return false;
         }
+        int width = (int) Math.round(questsGui.readDouble(0x1f8));
+        int height = (int) Math.round(questsGui.readDouble(0x200));
+        int runningQuests = API.readInt(botInstaller.mainAddress.get(), 0x208, 0x020, 0x024);
+        for (int i = 1; i <= runningQuests; i++) {
+            int cx = width - i * 11;
+            questsGui.click(cx, 5);
+            Time.sleep(25);
+        }
+        System.out.println(runningQuests);
+
 
         return false;
     }
@@ -82,7 +91,7 @@ public class QuestModule extends LootCollectorModule {
         if (this.heroApi.isAttacking()) {
             this.heroApi.triggerLaserAttack();
         }
-        Optional<GameMap> xyz = this.starSystemAPI.findMap("3-4");
+        Optional<GameMap> xyz = this.starSystemAPI.findMap("3-8");
         if (xyz.isEmpty()) {
             return;
         }
@@ -109,12 +118,12 @@ public class QuestModule extends LootCollectorModule {
             return;
         }
         this.movement.stop(false);
-        if (questGiverStation.isSelectable() && !this.questApi.isQuestGiverOpen()) {
+        /*if (questGiverStation.isSelectable() && !this.questApi.isQuestGiverOpen()) {
             questGiverStation.trySelect(true);
         }
         if (!this.questApi.isQuestGiverOpen()) {
             return;
-        }
+        }*/
         if (System.currentTimeMillis() >= nextCheck1) {
             if (flag) {
                 this.movement.moveTo(questGiverStation.getX() + 10, questGiverStation.getY() + 10);
@@ -124,7 +133,7 @@ public class QuestModule extends LootCollectorModule {
             flag = !flag;
             nextCheck1 = System.currentTimeMillis() + 10_000L;
         }
-
+/*
         Point questListItem01 = getOffsetPoint(208, 340);
         Point questListItem02 = getOffsetPoint(208, 370);
         Point questListItem03 = getOffsetPoint(208, 410);
@@ -139,7 +148,7 @@ public class QuestModule extends LootCollectorModule {
         else
             this.windowApi.mouseClick(accept_abortPtn);
         this.questSelected = !this.questSelected;
-
+*/
 
 
 
